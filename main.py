@@ -1,8 +1,30 @@
 import time
 import socket
+import machine
+from machine import Pin
 import libs.motion
 import libs.telemetry
+import libs.leds
 
+robot_driver = libs.motion.MecanumDriver()
+
+
+# Power Saving & Helper functions
+def apply_power_saving():
+    """ Shuts down high-current systems dynamically to preserve battery"""
+    print("\n[POWER] Movement finished. Activating automated standby idle..")
+    robot_driver.halt()
+    Pin(16, Pin.OUT).on()
+    
+    # start blinkinb our indicator in the background cleanly
+    libs.leds.start_blink_indicator()
+    print("[POWER] Motor driver suspended. Background heartbeat indicator active.\n")
+def wake_up_systems():
+    """ Wakes up motor driver hardware and stops idle indicators """
+    libs.leds.stop_blink_indicator()
+    Pin(16, Pin.OUT).off()
+    print("[POWER] Systems awake. Ready for locomotion..")
+    
 # ==========================================
 # 1. HELPER FUNCTIONS (Defined first!)
 # ==========================================
@@ -40,6 +62,9 @@ def parse_network_command(raw_data):
 
 def manual_move_robot():
     robot_driver = libs.motion.MecanumDriver()
+    libs.leds.stop_blink_indicator()
+    Pin(16, Pin.OUT).off()
+    
     """Diagnostic manual routine"""
     print("1. Moving forward at 50% speed....")
     robot_driver.drive(robot_driver.FORWARD, speed=512)
@@ -48,12 +73,12 @@ def manual_move_robot():
 
     print("\n===== Strafing sideways left....====\n")
     robot_driver.drive(robot_driver.STRAFE_LEFT, speed=600)
-    time.sleep(2)
+    time.sleep(1)
     robot_driver.halt()
 
     print("\n=== Coming Back ===\n")
     robot_driver.drive(robot_driver.STRAFE_RIGHT, speed=600)
-    time.sleep(2)
+    time.sleep(1)
     robot_driver.halt()
 
     robot_driver.drive(robot_driver.BACKWARD, speed=512)
@@ -61,18 +86,18 @@ def manual_move_robot():
     robot_driver.halt()
 
     print("\n====Mission Complete. Parking ========\n")
-    robot_driver.halt()
+    apply_power_saving()
 
 
 # ==========================================
 # 2. HARDWARE & NETWORK INITIALIZATION
 # ==========================================
 def wifi_connection():
-    WIFI_SSID = "Our Wifi"
-    WIFI_PASS = "Password"
+    WIFI_SSID = "Mukwasi 2G"
+    WIFI_PASS = "Mukwasi123"
 
     wifi = libs.telemetry.WifiEngine(WIFI_SSID, WIFI_PASS)
-    robot_driver = libs.motion.MecanumDriver()
+    
 
     if not wifi.connect():
         print("[ERROR] Could not connect to network. Exiting.")
@@ -91,6 +116,8 @@ def wifi_connection():
         while True:
             client_socket, client_address = server_socket.accept()
             print(f"\n[SERVER] Connection established from: {client_address}")
+            
+            wake_up_systems()
             
             while True:
                 data = client_socket.recv(1024)
@@ -120,11 +147,13 @@ def wifi_connection():
                     robot_driver.drive(robot_driver.STRAFE_RIGHT, speed=target_speed)
                 elif command == "STOP":
                     robot_driver.halt()
+                    
                 else:
                     print(f"[WARN] Unknown command format: {command}")
             
             client_socket.close()
             print("[SERVER] Client disconnected. Waiting for next controller...")
+            apply_power_saving()
 
     except KeyboardInterrupt:
         print("\n[SERVER] Shutting down network listener")
@@ -136,3 +165,4 @@ def wifi_connection():
 if __name__ == "__main__":
     
     manual_move_robot()
+    wifi_connection()

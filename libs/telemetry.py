@@ -13,9 +13,14 @@ class WifiEngine:
     def connect(self, timeout_seconds=15):
         """ Activates the radio and establishes a local connection network"""
 
+        if self.wlan.active():
+            self.wlan.active(False)
+            time.sleep(0.5)
+            
         self.wlan.active(True)
+        time.sleep(0.5)
 
-        if not self.wlan.isconected():
+        if not self.wlan.isconnected():
             print(f"[WIFI] Connecting to network: {self.ssid}...")
             self.wlan.connect(self.ssid, self.password)
 
@@ -43,3 +48,4 @@ class WifiEngine:
     def get_status(self):
         """ Returns the current connectoin state """
         return self.wlan.isconnected()
+
