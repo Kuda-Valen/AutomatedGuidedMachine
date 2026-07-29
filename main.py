@@ -136,15 +136,23 @@ def wifi_connection():
                 if command == "FORWARD":
                     target_speed = speed if speed is not None else 512
                     robot_driver.drive(robot_driver.FORWARD, speed=target_speed)
+                    time.sleep(3)
+                    robot_driver.halt()
                 elif command == "BACKWARD":
                     target_speed = speed if speed is not None else 512
                     robot_driver.drive(robot_driver.BACKWARD, speed=target_speed)
+                    time.sleep(3)
+                    robot_driver.halt()
                 elif command == "LEFT":
                     target_speed = speed if speed is not None else 512
                     robot_driver.drive(robot_driver.STRAFE_LEFT, speed=target_speed)
+                    time.sleep(3)
+                    robot_driver.halt()
                 elif command == "RIGHT":
                     target_speed = speed if speed is not None else 512
                     robot_driver.drive(robot_driver.STRAFE_RIGHT, speed=target_speed)
+                    time.sleep(3)
+                    robot_driver.halt()
                 elif command == "STOP":
                     robot_driver.halt()
                     
