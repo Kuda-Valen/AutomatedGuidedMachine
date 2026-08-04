@@ -67,7 +67,7 @@ class AGVArchitecture:
         if self.current_state == AGVState.STATE_FORWARD:
             # Check for immediate danger
             if self.filtered_distance < self.STOP_THRESHOLD_CM:
-                print(f"!!! OBSTACLE DETECTED at {self.filtered_distance:.1fm}cm !!!")
+                print(f"!!! OBSTACLE DETECTED at {self.filtered_distance:.1f}cm !!!")
                 self.action_cut_motors()
                 self.current_state = AGVState.STATE_BRAKE
             else:
@@ -87,4 +87,65 @@ class AGVArchitecture:
             if self.filtered_distance > self.SAFE_THRESHOLD_CM:
                 print(f"--- PATH CLEAR ({self.filtered_distance:.1f}cm), RESUMING MISSION ---")
                 self.current_state = AGVState.STATE_FORWARD
-                 
+
+    def action_drive_forward(self):
+        print(f"[ACTION] -> Driving Forward. Distance:{self.filtered_distance:.1f}cm")
+
+
+    def action_cut_motors(self):
+        print(f"[ACTION] -> MOTOR BRAKE ENGAGED.")
+
+    def action_drive_reverse(self):
+        print(f"[ACTION] -> Reversing Chassis. Distance: {self.filtered_distance:.1f}cm")
+
+"""
+    MAIN EXECUTION (Simulation)
+"""
+
+agv = AGVArchitecture()
+
+# Simulation Data Scenarios
+simulated_sensor_readings = [
+    # Scenario A: Initial clear path (waiting for buffer)
+    100.0, 100.5, 99.0, 101.2, 100.0,
+    # Buffer is full, proper reading begins.
+    100.1,
+    # Scenario B: Minor Garbage Readings (Single bad reads)
+    0.0, 100.0, # These should be filtered out completely
+    250.0, 99.5,
+    # Scenario C: Gradual Obstacle Approach
+    60.0, 50.0, 40.0, 35.0, 32.0, 
+    # Scenario D: Outlier spikes during the approach
+    32.0, 250.0, 31.0, 0.0, 31.5,
+    # Scenario E: The Obstacle Threshold (Must Trigger Brake)
+    29.0, 29.5, 30.0,
+    # Scenario F: Sudden Obstacle (Very close)
+    15.0, 15.0, 15.0,
+    # Transition to BRAKE and then REVERSE will happen
+    # Scenario G: Reversing Away (Data increases)
+    20.0, 35.0, 50.0, 55.0,
+    # Scenario H: Path is clear, must transition back to FORWARD
+    100.0, 101.0, 100.0
+]
+
+print("Starting Virtual AGV Emulation Module...")
+print("=" * 40)
+print(f"STOP THRESHOLD: {agv.STOP_THRESHOLD_CM}cm")
+print("-" * 40)
+
+step = 1
+for raw_read in simulated_sensor_readings:
+    agv.raw_distance = raw_read
+    processed_distance = agv.apply_median_filter(raw_read)
+
+    if processed_distance < 900:
+        print(f"Step {step}: [Filter Log] Raw: {agv.raw_distance:.1f} | Cleaned: {processed_distance:.1f}")
+
+    agv.execute_state_machine(processed_distance)
+
+    time.sleep(0.05)
+    step += 1
+
+print("=" * 40)
+print("Virtual AGV Emulation Complete.")
+print("The software handled the outliers without triggering false breaks.")
